@@ -11,7 +11,6 @@ Poses are cached in outputs/poses/, so re-running with new thresholds is fast.
 import argparse
 import json
 from datetime import datetime, timezone
-from functools import partial
 from importlib.metadata import version
 from pathlib import Path
 
@@ -20,11 +19,9 @@ import yaml
 from tqdm import tqdm
 
 from smokewatch.annotations import load_clips
-from smokewatch.classifier import SmokingClassifier, score_cycles
+from smokewatch.classifier import SmokingClassifier
 from smokewatch.events import OUTPUT_COLUMNS
-from smokewatch.objects import extract_objects
-from smokewatch.pipeline import load_or_extract, load_roi_mask, process_clip
-from smokewatch.pose import extract_poses
+from smokewatch.pipeline import analyze_video, load_roi_mask
 
 
 def main() -> None:
@@ -51,27 +48,10 @@ def main() -> None:
 
     all_rows, all_cycles = [], []
     for _, clip in tqdm(list(clips.iterrows()), desc="clips"):
-        video = args.raw_dir / clip["path"]
-        cache_name = f"{clip['clip_id']}.csv"
         roi_mask = load_roi_mask(args.roi_dir, clip["camera_id"])
-
-        poses = load_or_extract(
-            args.outputs / "poses" / cache_name,
-            partial(extract_poses, video, config["pose"], roi_mask),
+        rows, cycles, _ = analyze_video(
+            args.raw_dir / clip["path"], clip, config, args.outputs, roi_mask, classifier
         )
-        objects = None
-        if config["objects"]["enabled"]:
-            objects = load_or_extract(
-                args.outputs / "hand_objects" / cache_name,
-                partial(extract_objects, video, config["objects"], poses, roi_mask),
-            )
-
-        scorer = None
-        if classifier is not None:
-            crop_size = config["classifier"]["crop_size"]
-            scorer = partial(score_cycles, classifier, video, poses, crop_size)
-
-        rows, cycles = process_clip(clip, poses, objects, config, scorer)
         all_rows += rows
         all_cycles.append(cycles)
 

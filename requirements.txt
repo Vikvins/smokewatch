@@ -7,3 +7,5 @@ tqdm
 ultralytics  # YOLO person detection, pose estimation and ByteTrack tracking
 lap  # linear assignment, needed by the ByteTrack tracker
 open_clip_torch  # zero-shot CLIP check: smoking vs drinking, phone, ...
+streamlit  # local web app (app.py)
+imageio-ffmpeg  # bundled ffmpeg: browser-playable H.264 overlay videos

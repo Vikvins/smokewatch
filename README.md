@@ -45,7 +45,18 @@ pip install -e .
 nbstripout --install
 ```
 
-## Run
+## Web app
+
+```bash
+python -m streamlit run app.py
+```
+
+Pick a clip from `clips.csv` or upload a video, press **Analyze** and get a player with
+tracked people, hand-to-mouth gestures and detected events drawn on the video, a table of
+events (with a jump-to-event selector) and a CSV download. It runs on this machine only:
+uploads go to `data/uploads/`, results to `outputs/`.
+
+## Command line
 
 ```bash
 python tools/run_pipeline.py --run baseline          # all clips in clips.csv
@@ -63,6 +74,7 @@ See [docs/annotation_guide.md](docs/annotation_guide.md).
 ## Project layout
 
 ```
+app.py        Streamlit web app
 configs/      YAML configs (thresholds, model names, event rules)
 data/         raw videos and annotations (local only, git-ignored)
 docs/         annotation guide and other notes

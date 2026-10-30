@@ -12,7 +12,7 @@ jobs:
           python-version: "3.11"
       # Tests do not need the models, so the heavy packages
       # (ultralytics, open_clip / torch) are not installed here.
-      - run: pip install numpy opencv-python-headless pandas pyyaml pytest ruff
+      - run: pip install numpy opencv-python-headless pandas pyyaml imageio-ffmpeg pytest ruff
       - run: pip install -e . --no-deps
       - run: ruff check .
       - run: ruff format --check .

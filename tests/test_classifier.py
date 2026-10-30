@@ -93,3 +93,10 @@ def test_event_is_dropped_when_no_cycle_looks_like_smoking(scores, expected_even
     assert len(table) == 2
     assert len(rows) == expected_events
     np.testing.assert_array_equal(table["smoking_score"], scores)
+
+
+def test_clip_without_cycles_gives_empty_tables_with_columns():
+    clip = pd.Series({"camera_id": "cam", "clip_id": "c1"})
+    rows, table = process_clip(clip, make_poses([0.0, 0.1], 450), None, CONFIG)
+    assert rows == []
+    assert {"track_id", "start_sec", "end_sec", "smoking_score"} <= set(table.columns)

@@ -1,16 +1,21 @@
 """Run the whole pipeline on one clip: poses -> cycles -> filters -> events."""
 
 from collections.abc import Callable
-from dataclasses import asdict
+from dataclasses import asdict, fields
+from functools import partial
 from pathlib import Path
 
 import cv2
 import numpy as np
 import pandas as pd
 
+from smokewatch.classifier import SmokingClassifier, score_cycles
 from smokewatch.cycles import Cycle, detect_cycles
 from smokewatch.events import Event, build_events, events_to_rows
-from smokewatch.objects import object_in_hand
+from smokewatch.objects import extract_objects, object_in_hand
+from smokewatch.pose import extract_poses
+
+CYCLE_COLUMNS = ["clip_id", *(f.name for f in fields(Cycle)), "held_object", "smoking_score"]
 
 
 def load_roi_mask(roi_dir: Path, camera_id: str):
@@ -78,6 +83,38 @@ def process_clip(
                 "smoking_score": score,
             }
             for cycle, name, score in zip(cycles, held, scores, strict=True)
-        ]
+        ],
+        columns=CYCLE_COLUMNS,
     )
     return rows, table
+
+
+def analyze_video(
+    video: Path,
+    clip: pd.Series,
+    config: dict,
+    outputs: Path,
+    roi_mask=None,
+    classifier: SmokingClassifier | None = None,
+) -> tuple[list[dict], pd.DataFrame, pd.DataFrame]:
+    """All steps for one video: return event rows, the cycles table and the poses.
+
+    `clip` needs `clip_id` (used as the cache file name) and `camera_id`.
+    """
+    cache_name = f"{clip['clip_id']}.csv"
+    poses = load_or_extract(
+        outputs / "poses" / cache_name,
+        partial(extract_poses, video, config["pose"], roi_mask),
+    )
+    objects = None
+    if config["objects"]["enabled"]:
+        objects = load_or_extract(
+            outputs / "hand_objects" / cache_name,
+            partial(extract_objects, video, config["objects"], poses, roi_mask),
+        )
+    scorer = None
+    if classifier is not None:
+        scorer = partial(score_cycles, classifier, video, poses, config["classifier"]["crop_size"])
+
+    rows, cycles = process_clip(clip, poses, objects, config, scorer)
+    return rows, cycles, poses

@@ -18,7 +18,8 @@ video ──► pose.py ──► cycles.py ──► classifier.py ──► ev
 
 All settings live in `configs/default.yaml`. An optional region-of-interest mask
 can be put in `configs/roi/<camera_id>.png` (white = analyse, black = ignore).
-`tools/render_overlay.py` draws tracks, cycles and events on a clip for review.
+`tools/render_overlay.py` and the web app (`app.py`) draw tracks, cycles and events
+on a clip for review (`overlay.py`).
 
 ## Why zero-shot CLIP and not a trained classifier
 
