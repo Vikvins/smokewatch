@@ -1,0 +1,25 @@
+# Pipeline
+
+```
+video ──► pose.py ──► cycles.py ──► events.py ──► events.csv + manifest.json
+          people,      hand-to-mouth   event rules,       │
+          tracks,      signal and      confidence,        ▼
+          keypoints    cycles          box at peak    evaluation.py ──► metrics.json
+```
+
+| step | module | what it does |
+|------|--------|--------------|
+| 1 | `pose.py` | Samples the video at `sample_fps`, runs YOLO pose + ByteTrack, keeps nose, shoulders and wrists per track. Results are cached in `outputs/poses/`. |
+| 2 | `cycles.py` | For every track: distance from the nose to the closer wrist, in shoulder widths. |
+| 3 | `cycles.py` | Finds "away -> at the mouth for 0.5-5 s -> away" with two thresholds (hysteresis). |
+| 4 | `events.py` | Merges cycles of one track with gaps <= 15 s, keeps groups with 2 cycles in 20 s, scores them. |
+| 5 | `evaluation.py` | Event matching and metrics exactly as in the task. |
+
+All settings live in `configs/default.yaml`. An optional region-of-interest mask
+can be put in `configs/roi/<camera_id>.png` (white = analyse, black = ignore).
+
+## Known limitations (next steps)
+
+- "1 cycle + direct cue" (cigarette, vape, smoke) is not implemented yet.
+- A tracker id switch splits one person's event into two.
+- Thresholds are first guesses; tune them on the `dev` split only.

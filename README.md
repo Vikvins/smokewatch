@@ -25,6 +25,16 @@ pip install -e .
 nbstripout --install
 ```
 
+## Run
+
+```bash
+python tools/run_pipeline.py --run baseline          # all clips in clips.csv
+python tools/run_pipeline.py --run baseline --clip sm_2
+python tools/evaluate.py --run baseline --split dev
+```
+
+How it works: [docs/pipeline.md](docs/pipeline.md).
+
 ## Annotation
 
 See [docs/annotation_guide.md](docs/annotation_guide.md).
