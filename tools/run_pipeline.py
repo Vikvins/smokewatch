@@ -11,6 +11,7 @@ Poses are cached in outputs/poses/, so re-running with new thresholds is fast.
 import argparse
 import json
 from datetime import datetime, timezone
+from functools import partial
 from importlib.metadata import version
 from pathlib import Path
 
@@ -20,12 +21,9 @@ from tqdm import tqdm
 
 from smokewatch.annotations import load_clips
 from smokewatch.events import OUTPUT_COLUMNS
-from smokewatch.pipeline import (
-    cycles_to_frame,
-    load_or_extract_poses,
-    load_roi_mask,
-    process_clip,
-)
+from smokewatch.objects import extract_objects
+from smokewatch.pipeline import load_or_extract, load_roi_mask, process_clip
+from smokewatch.pose import extract_poses
 
 
 def main() -> None:
@@ -48,15 +46,24 @@ def main() -> None:
 
     all_rows, all_cycles = [], []
     for _, clip in tqdm(list(clips.iterrows()), desc="clips"):
-        poses = load_or_extract_poses(
-            args.raw_dir / clip["path"],
-            args.outputs / "poses" / f"{clip['clip_id']}.csv",
-            config["pose"],
-            load_roi_mask(args.roi_dir, clip["camera_id"]),
+        video = args.raw_dir / clip["path"]
+        cache_name = f"{clip['clip_id']}.csv"
+        roi_mask = load_roi_mask(args.roi_dir, clip["camera_id"])
+
+        poses = load_or_extract(
+            args.outputs / "poses" / cache_name,
+            partial(extract_poses, video, config["pose"], roi_mask),
         )
-        rows, cycles = process_clip(clip, poses, config)
+        objects = None
+        if config["objects"]["enabled"]:
+            objects = load_or_extract(
+                args.outputs / "objects" / cache_name,
+                partial(extract_objects, video, config["objects"], roi_mask),
+            )
+
+        rows, cycles = process_clip(clip, poses, objects, config)
         all_rows += rows
-        all_cycles.append(cycles_to_frame(clip["clip_id"], cycles))
+        all_cycles.append(cycles)
 
     run_dir = args.outputs / "runs" / args.run
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -71,6 +78,7 @@ def main() -> None:
         "config": config,
         "model_versions": {
             "pose_model": config["pose"]["model"],
+            "object_model": config["objects"]["model"],
             "ultralytics": version("ultralytics"),
             "smokewatch": version("smokewatch"),
         },

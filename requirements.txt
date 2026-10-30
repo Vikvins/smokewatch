@@ -5,3 +5,4 @@ pandas
 pyyaml
 tqdm
 ultralytics  # YOLO person detection, pose estimation and ByteTrack tracking
+lap  # linear assignment, needed by the ByteTrack tracker

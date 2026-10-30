@@ -22,6 +22,24 @@ class Cycle:
     min_distance: float  # closest the hand got, in shoulder widths
 
 
+def keypoint_distance(poses: pd.DataFrame, a: str, b: str) -> pd.Series:
+    return np.hypot(poses[f"{a}_x"] - poses[f"{b}_x"], poses[f"{a}_y"] - poses[f"{b}_y"])
+
+
+def body_scale(poses: pd.DataFrame, min_keypoint_conf: float) -> pd.Series:
+    """Shoulder width in pixels, NaN where a shoulder is not visible.
+
+    Seen from the side, shoulders overlap, so a fraction of the box height
+    is used as a lower bound.
+    """
+    shoulder_width = keypoint_distance(poses, "left_shoulder", "right_shoulder")
+    scale = np.maximum(shoulder_width, 0.15 * (poses["y2"] - poses["y1"]))
+    shoulders_visible = (poses["left_shoulder_c"] >= min_keypoint_conf) & (
+        poses["right_shoulder_c"] >= min_keypoint_conf
+    )
+    return scale.where(shoulders_visible)
+
+
 def hand_to_mouth_distance(poses: pd.DataFrame, min_keypoint_conf: float) -> pd.Series:
     """Distance from the nose to the closer reliable wrist, in shoulder widths.
 
@@ -31,16 +49,9 @@ def hand_to_mouth_distance(poses: pd.DataFrame, min_keypoint_conf: float) -> pd.
     def visible(name: str) -> pd.Series:
         return poses[f"{name}_c"] >= min_keypoint_conf
 
-    def distance(a: str, b: str) -> pd.Series:
-        return np.hypot(poses[f"{a}_x"] - poses[f"{b}_x"], poses[f"{a}_y"] - poses[f"{b}_y"])
-
-    shoulder_width = distance("left_shoulder", "right_shoulder")
-    # Seen from the side, shoulders overlap; fall back to a fraction of the box height.
-    scale = np.maximum(shoulder_width, 0.15 * (poses["y2"] - poses["y1"]))
-    scale = scale.where(visible("left_shoulder") & visible("right_shoulder"))
-
+    scale = body_scale(poses, min_keypoint_conf)
     wrist_distances = [
-        distance(f"{side}_wrist", "nose").where(visible(f"{side}_wrist"))
+        keypoint_distance(poses, f"{side}_wrist", "nose").where(visible(f"{side}_wrist"))
         for side in ("left", "right")
     ]
     closest = pd.concat(wrist_distances, axis=1).min(axis=1)

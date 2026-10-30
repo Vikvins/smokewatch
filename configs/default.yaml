@@ -7,6 +7,17 @@ pose:
   min_person_conf: 0.3
   tracker: bytetrack.yaml
 
+objects:
+  enabled: true
+  model: yolo11n.pt       # standard COCO detector, downloaded automatically
+  device: mps
+  sample_fps: 5
+  min_conf: 0.25
+  classes: [bottle, wine glass, cup, cell phone]
+  max_time_gap_sec: 0.1   # pose and object samples closer than this are compared
+  max_wrist_distance: 1.0 # object centre to wrist, in shoulder widths
+  min_fraction: 0.3       # share of cycle samples with the object in hand
+
 signal:
   min_keypoint_conf: 0.4
   near_mouth: 0.6     # wrist-to-nose distance (in shoulder widths) to count as "at the mouth"
