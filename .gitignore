@@ -1,0 +1,33 @@
+# --- Confidential data: never commit ---
+# Raw videos, annotations, extracted frames and anything derived from them.
+data/
+outputs/
+
+# Safety net in case a video ends up outside data/
+*.mp4
+*.mkv
+*.webm
+*.wmv
+*.mov
+*.avi
+
+# Model weights (downloaded automatically, large binaries)
+*.pt
+*.onnx
+*.mlpackage/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+
+# --- OS / editors ---
+.DS_Store
+.vscode/
+.idea/

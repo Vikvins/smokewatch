@@ -1,0 +1,7 @@
+# Runtime dependencies. Versions will be pinned once the pipeline works end to end.
+numpy
+opencv-python
+pandas
+pyyaml
+tqdm
+ultralytics  # YOLO person detection, pose estimation and ByteTrack tracking
