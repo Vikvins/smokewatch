@@ -1,7 +1,7 @@
 import pandas as pd
 
 from smokewatch.cycles import Cycle
-from smokewatch.objects import object_in_hand
+from smokewatch.objects import OBJECT_COLUMNS, head_crop, object_in_hand
 
 CONFIG = {"max_time_gap_sec": 0.1, "max_wrist_distance": 1.0, "min_fraction": 0.3}
 CYCLE = Cycle(track_id=1, start_sec=0.0, end_sec=1.0, pause_sec=0.6, peak_sec=0.5, min_distance=0.2)
@@ -44,6 +44,7 @@ def make_objects(centre_x: float, times: list[float]) -> pd.DataFrame:
         [
             {
                 "time_sec": t,
+                "track_id": 1,
                 "name": "bottle",
                 "conf": 0.8,
                 "x1": centre_x - 10,
@@ -52,7 +53,8 @@ def make_objects(centre_x: float, times: list[float]) -> pd.DataFrame:
                 "y2": 310,
             }
             for t in times
-        ]
+        ],
+        columns=OBJECT_COLUMNS,
     )
 
 
@@ -74,3 +76,14 @@ def test_brief_detection_is_not_enough():
 
 def test_no_objects():
     assert held(make_objects(510, [])) is None
+
+
+def test_other_persons_object_is_ignored():
+    objects = make_objects(510, [0.0, 0.2, 0.4, 0.6]).assign(track_id=2)
+    assert held(objects) is None
+
+
+def test_head_crop_is_centred_on_nose_and_clipped_to_frame():
+    pose = make_poses().iloc[0]
+    assert head_crop(pose, (1080, 1920), crop_size=3.0) == (400, 100, 700, 400)
+    assert head_crop(pose, (300, 1920), crop_size=3.0) == (400, 100, 700, 300)

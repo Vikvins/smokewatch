@@ -3,6 +3,10 @@
 Drinking or talking on the phone produce the same hand-to-mouth gesture as
 smoking. A standard COCO detector already knows bottles, cups and phones, so
 a cycle where such an object stays next to the wrist is dropped.
+
+On surveillance footage a bottle is only 15-20 px wide and disappears when
+the whole frame is resized for the detector. So the detector looks at a
+crop around each person's head at full resolution instead.
 """
 
 from pathlib import Path
@@ -13,32 +17,85 @@ import pandas as pd
 from smokewatch.cycles import Cycle, body_scale
 from smokewatch.pose import iter_sampled_frames
 
-OBJECT_COLUMNS = ["time_sec", "name", "conf", "x1", "y1", "x2", "y2"]
+OBJECT_COLUMNS = ["time_sec", "track_id", "name", "conf", "x1", "y1", "x2", "y2"]
 
 
-def extract_objects(video_path: Path, config: dict, roi_mask=None) -> pd.DataFrame:
-    """Detect the configured COCO classes; return one row per detection."""
+def head_crop(pose: pd.Series, frame_shape: tuple, crop_size: float) -> tuple[int, int, int, int]:
+    """Square around the head, `crop_size` shoulder widths wide, inside the frame.
+
+    Wrists at the mouth fall inside it, together with whatever they hold.
+    """
+    box_height = pose["y2"] - pose["y1"]
+    scale = max(
+        np.hypot(
+            pose["left_shoulder_x"] - pose["right_shoulder_x"],
+            pose["left_shoulder_y"] - pose["right_shoulder_y"],
+        ),
+        0.15 * box_height,
+    )
+    if pose["nose_c"] >= 0.3:
+        centre_x, centre_y = pose["nose_x"], pose["nose_y"]
+    else:  # head not visible: use the top part of the person box
+        centre_x, centre_y = (pose["x1"] + pose["x2"]) / 2, pose["y1"] + 0.15 * box_height
+
+    half = crop_size * scale / 2
+    height, width = frame_shape[:2]
+    x1, y1 = max(0, int(centre_x - half)), max(0, int(centre_y - half))
+    x2, y2 = min(width, int(centre_x + half)), min(height, int(centre_y + half))
+    return x1, y1, x2, y2
+
+
+def extract_objects(
+    video_path: Path, config: dict, poses: pd.DataFrame, roi_mask=None
+) -> pd.DataFrame:
+    """Detect the configured COCO classes near each tracked person's head.
+
+    Returns one row per detection, in full-frame pixel coordinates.
+    """
     from ultralytics import YOLO
 
     model = YOLO(config["model"])
     class_ids = [i for i, name in model.names.items() if name in config["classes"]]
     rows = []
     for time_sec, frame in iter_sampled_frames(video_path, config["sample_fps"], roi_mask):
-        result = model.predict(
-            frame,
+        people = poses[(poses["time_sec"] - time_sec).abs() <= config["max_time_gap_sec"]]
+        people = people.drop_duplicates("track_id")
+        crops = [
+            head_crop(person, frame.shape, config["crop_size"]) for _, person in people.iterrows()
+        ]
+        crops = [
+            (track_id, c)
+            for track_id, c in zip(people["track_id"], crops, strict=True)
+            if c[2] - c[0] >= 8 and c[3] - c[1] >= 8
+        ]
+        if not crops:
+            continue
+
+        results = model.predict(
+            [frame[y1:y2, x1:x2] for _, (x1, y1, x2, y2) in crops],
             classes=class_ids,
             conf=config["min_conf"],
+            imgsz=config["imgsz"],
             device=config["device"],
             verbose=False,
-        )[0]
-        boxes = result.boxes
-        for class_id, conf, box in zip(
-            boxes.cls.int().tolist(), boxes.conf.tolist(), boxes.xyxy.tolist(), strict=True
-        ):
-            rows.append(
-                {"time_sec": round(time_sec, 3), "name": model.names[class_id], "conf": conf}
-                | dict(zip(["x1", "y1", "x2", "y2"], box, strict=True))
-            )
+        )
+        for (track_id, (crop_x, crop_y, _, _)), result in zip(crops, results, strict=True):
+            boxes = result.boxes
+            for class_id, conf, (x1, y1, x2, y2) in zip(
+                boxes.cls.int().tolist(), boxes.conf.tolist(), boxes.xyxy.tolist(), strict=True
+            ):
+                rows.append(
+                    {
+                        "time_sec": round(time_sec, 3),
+                        "track_id": int(track_id),
+                        "name": model.names[class_id],
+                        "conf": conf,
+                        "x1": x1 + crop_x,
+                        "y1": y1 + crop_y,
+                        "x2": x2 + crop_x,
+                        "y2": y2 + crop_y,
+                    }
+                )
     return pd.DataFrame(rows, columns=OBJECT_COLUMNS)
 
 
@@ -56,6 +113,7 @@ def object_in_hand(
         (poses["track_id"] == cycle.track_id)
         & poses["time_sec"].between(cycle.start_sec, cycle.end_sec)
     ]
+    objects = objects[objects["track_id"] == cycle.track_id]
     if track.empty or objects.empty:
         return None
 

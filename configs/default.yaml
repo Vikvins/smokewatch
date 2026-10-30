@@ -12,6 +12,8 @@ objects:
   model: yolo11n.pt       # standard COCO detector, downloaded automatically
   device: mps
   sample_fps: 5
+  crop_size: 3.0          # head crop side, in shoulder widths
+  imgsz: 320              # crops are resized to this before detection
   min_conf: 0.25
   classes: [bottle, wine glass, cup, cell phone]
   max_time_gap_sec: 0.1   # pose and object samples closer than this are compared

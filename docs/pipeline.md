@@ -12,7 +12,7 @@ video ──► pose.py ──► cycles.py ──► objects.py ──► event
 | 1 | `pose.py` | Samples the video at `sample_fps`, runs YOLO pose + ByteTrack, keeps nose, shoulders and wrists per track. Results are cached in `outputs/poses/`. |
 | 2 | `cycles.py` | For every track: distance from the nose to the closer wrist, in shoulder widths. |
 | 3 | `cycles.py` | Finds "away -> at the mouth for 0.5-5 s -> away" with two thresholds (hysteresis). |
-| 3b | `objects.py` | Runs a standard COCO detector (bottle, cup, wine glass, cell phone). A cycle with such an object next to the wrist is a hard negative (drinking, phone) and is dropped. Detections are cached in `outputs/objects/`. |
+| 3b | `objects.py` | Runs a standard COCO detector (bottle, cup, wine glass, cell phone) on a full-resolution crop around each person's head, so small objects stay visible. A cycle with such an object next to the wrist is a hard negative (drinking, phone) and is dropped. Detections are cached in `outputs/hand_objects/`. |
 | 4 | `events.py` | Merges cycles of one track with gaps <= 15 s, keeps groups with 2 cycles in 20 s, scores them. |
 | 5 | `evaluation.py` | Event matching and metrics exactly as in the task. |
 

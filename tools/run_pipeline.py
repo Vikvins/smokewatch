@@ -57,8 +57,8 @@ def main() -> None:
         objects = None
         if config["objects"]["enabled"]:
             objects = load_or_extract(
-                args.outputs / "objects" / cache_name,
-                partial(extract_objects, video, config["objects"], roi_mask),
+                args.outputs / "hand_objects" / cache_name,
+                partial(extract_objects, video, config["objects"], poses, roi_mask),
             )
 
         rows, cycles = process_clip(clip, poses, objects, config)
