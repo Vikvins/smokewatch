@@ -1,5 +1,7 @@
 # SmokeWatch
 
+[![CI](https://github.com/Vikvins/smokewatch/actions/workflows/ci.yml/badge.svg)](https://github.com/Vikvins/smokewatch/actions/workflows/ci.yml)
+
 Event-level detection of smoking-like behavior in video from stationary surveillance cameras.
 
 The pipeline tracks people, estimates their pose and recognizes the hand-to-mouth gesture
