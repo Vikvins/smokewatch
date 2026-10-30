@@ -8,7 +8,7 @@ pose:
   tracker: bytetrack.yaml
 
 objects:
-  enabled: true
+  enabled: false          # COCO detector is unreliable on this footage (see docs/pipeline.md)
   model: yolo11n.pt       # standard COCO detector, downloaded automatically
   device: mps
   sample_fps: 5

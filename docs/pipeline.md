@@ -24,3 +24,6 @@ can be put in `configs/roi/<camera_id>.png` (white = analyse, black = ignore).
 - "1 cycle + direct cue" (cigarette, vape, smoke) is not implemented yet.
 - A tracker id switch splits one person's event into two.
 - Thresholds are first guesses; tune them on the `dev` split only.
+- The COCO object filter (`objects.enabled`) is off by default: on the
+  available footage it rarely finds bottles in drinking clips and often
+  "finds" phones and bottles in smoking clips (run try3, 2026-10-30).
