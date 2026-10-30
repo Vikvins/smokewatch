@@ -22,7 +22,7 @@ objects:
 
 signal:
   min_keypoint_conf: 0.4
-  near_mouth: 0.6     # wrist-to-nose distance (in shoulder widths) to count as "at the mouth"
+  near_mouth: 0.75    # wrist-to-nose distance (in shoulder widths) to count as "at the mouth"
   far_from_mouth: 1.0 # distance to count as "away"; the gap between the two avoids flicker
   max_gap_sec: 0.5    # short keypoint dropouts are bridged
 
@@ -34,7 +34,7 @@ events:
   min_cycles: 2       # 1 cycle + direct cue is not implemented yet
   window_sec: 20      # the first two cycles must fit into this window
   merge_gap_sec: 15   # cycles of one person closer than this form one event
-  threshold: 0.5      # minimum confidence to report an event
+  threshold: 0.3      # minimum confidence to report an event
 
 evaluation:
   gt_extend_sec: 3
