@@ -4,8 +4,26 @@ Event-level detection of smoking-like behavior in video from stationary surveill
 
 The pipeline tracks people, estimates their pose and recognizes the hand-to-mouth gesture
 cycle (hand moves to the mouth, pauses for 0.5-5 s, moves away). Cycles are combined into
-events with start/end time, confidence and a person bounding box, and evaluated with
-event-level precision, recall, F1 and false positives per hour.
+events with start/end time, confidence and a person bounding box. A zero-shot CLIP check of
+the head crop drops events that look like drinking, eating or a phone call. Events are
+evaluated with event-level precision, recall, F1 and false positives per hour.
+
+```
+video -> YOLO11 pose + ByteTrack -> hand-to-mouth cycles -> event rules -> CLIP check -> events.csv
+```
+
+Everything runs locally on a laptop (Apple M4, `mps`): no video leaves the machine.
+
+## Results
+
+Held-out test split (13 clips, 22 min; thresholds chosen on the dev split only):
+
+| version | precision | recall | F1 | false positives / hour |
+|---------|-----------|--------|----|------------------------|
+| gestures only | 0.50 | 0.50 | 0.50 | 18.7 |
+| gestures + CLIP check | 0.60 | 0.50 | 0.55 | 12.5 |
+
+Details, how the ground truth was built and what did not work: [docs/results.md](docs/results.md).
 
 Based on a case by Videofor at the Sirius University hackathon (October 2026).
 This repository is an independent re-implementation.
@@ -30,7 +48,8 @@ nbstripout --install
 ```bash
 python tools/run_pipeline.py --run baseline          # all clips in clips.csv
 python tools/run_pipeline.py --run baseline --clip sm_2
-python tools/evaluate.py --run baseline --split dev
+python tools/evaluate.py --run baseline --split test
+python tools/render_overlay.py --run baseline --clip sm_2   # video with boxes and events
 ```
 
 How it works: [docs/pipeline.md](docs/pipeline.md).

@@ -20,6 +20,14 @@ objects:
   max_wrist_distance: 1.0 # object centre to wrist, in shoulder widths
   min_fraction: 0.3       # share of cycle samples with the object in hand
 
+classifier:
+  enabled: true           # zero-shot CLIP check of every cycle (see docs/pipeline.md)
+  model: ViT-B-32         # open_clip architecture; weights are downloaded on first run
+  weights: laion2b_s34b_b79k
+  device: mps
+  crop_size: 3.0          # head crop side, in shoulder widths
+  min_score: 0.1          # drop events whose best cycle looks less like smoking (0 = off)
+
 signal:
   min_keypoint_conf: 0.4
   near_mouth: 0.75    # wrist-to-nose distance (in shoulder widths) to count as "at the mouth"

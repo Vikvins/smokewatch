@@ -20,6 +20,7 @@ import yaml
 from tqdm import tqdm
 
 from smokewatch.annotations import load_clips
+from smokewatch.classifier import SmokingClassifier, score_cycles
 from smokewatch.events import OUTPUT_COLUMNS
 from smokewatch.objects import extract_objects
 from smokewatch.pipeline import load_or_extract, load_roi_mask, process_clip
@@ -44,6 +45,10 @@ def main() -> None:
         if clips.empty:
             raise SystemExit(f"unknown clip_id {args.clip!r}")
 
+    classifier = None
+    if config["classifier"]["enabled"]:
+        classifier = SmokingClassifier(config["classifier"])
+
     all_rows, all_cycles = [], []
     for _, clip in tqdm(list(clips.iterrows()), desc="clips"):
         video = args.raw_dir / clip["path"]
@@ -61,7 +66,12 @@ def main() -> None:
                 partial(extract_objects, video, config["objects"], poses, roi_mask),
             )
 
-        rows, cycles = process_clip(clip, poses, objects, config)
+        scorer = None
+        if classifier is not None:
+            crop_size = config["classifier"]["crop_size"]
+            scorer = partial(score_cycles, classifier, video, poses, crop_size)
+
+        rows, cycles = process_clip(clip, poses, objects, config, scorer)
         all_rows += rows
         all_cycles.append(cycles)
 
@@ -79,6 +89,8 @@ def main() -> None:
         "model_versions": {
             "pose_model": config["pose"]["model"],
             "object_model": config["objects"]["model"],
+            "classifier_model": config["classifier"]["model"],
+            "classifier_weights": config["classifier"]["weights"],
             "ultralytics": version("ultralytics"),
             "smokewatch": version("smokewatch"),
         },
